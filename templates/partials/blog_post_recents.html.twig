@@ -1,0 +1,20 @@
+<div class="post">
+	<div class="post-heading">
+		<span>{{ post.publishedAt | date('d') }} {{ post.publishedAt | date('F') }}</span>
+		<img class="img-responsive" src="{{ asset('images/blog/' ~ post.image) }}" alt="{{post.title}}">
+	</div>
+	<div class="post-body">
+		<span>
+			<i class="fa fa-heart sr-icons"></i>
+			{{post.numLikes}}
+			<i class="fa fa-comments sr-icons"></i>
+			{{post.numComments}}
+		</span>
+		<h4 class="text-left">
+			<a href="{{ path('single_post', {'slug':post.slug}) }}">
+				<strong>{{post.title}}</strong>
+			</a>
+		</h4>
+	</div>
+</div>
+

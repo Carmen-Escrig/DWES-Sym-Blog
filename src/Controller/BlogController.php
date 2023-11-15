@@ -15,9 +15,14 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\Security\Http\Util\TargetPathTrait;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+
+
 
 class BlogController extends AbstractController
 {
+    use TargetPathTrait;
     #[Route("/blog/buscar/{page}", name: 'blog_buscar')]
     public function buscar(ManagerRegistry $doctrine,  Request $request, int $page = 1): Response
     {
@@ -46,12 +51,12 @@ class BlogController extends AbstractController
                 try {
 
                     $file->move(
-                        $this->getParameter('images_directory'), $newFilename
+                        $this->getParameter('post_image_directory'), $newFilename
                     );
-                    $filesystem = new Filesystem();
-                    $filesystem->copy(
+                    /*$filesystem = new Filesystem();
+                     $filesystem->copy(
                         $this->getParameter('images_directory') . '/'. $newFilename, 
-                        $this->getParameter('portfolio_directory') . '/'.  $newFilename, true);
+                        $this->getParameter('portfolio_directory') . '/'.  $newFilename, true); */
 
                 } catch (FileException $e) {
                     return new Response("Error: " . $e->getMessage());
@@ -59,29 +64,55 @@ class BlogController extends AbstractController
 
                 // updates the 'file$filename' property to store the PDF file name
                 // instead of its contents
-                $chocolate->setFile($newFilename);
+                $post->setImage($newFilename);
             }
             
-            $chocolate = $form->getData();
+            $post = $form->getData();
+
+            $post->setUser($this->getUser());
+
+            $post->setNumLikes(0);
+            $post->setNumComments(0);
+            $post->setNumViews(0);
+
+            $post->setSlug($slugger->slug($post->getTitle()));
             $entityManager = $doctrine->getManager();
-            $entityManager->persist($chocolate);
+            $entityManager->persist($post);
 
             try {
                 $entityManager->flush();
-                return $this->redirectToRoute('chocolate');
+                return $this->redirectToRoute('blog');
             } catch (\Exception $e) {
                 return new Response("Error: " . $e->getMessage());
             }
         }
 
-     return new Response("blog");
+        return $this->render('blog/new_post.html.twig', [
+            'controller_name' => 'PageController',
+            'form' => $form->createView()
+        ]);
     }
     
     #[Route("/single_post/{slug}/like", name: 'post_like')]
-    public function like(ManagerRegistry $doctrine, $slug): Response
+    public function like(ManagerRegistry $doctrine, Request $request, SessionInterface $session, $slug): Response
     {
-        return new Response("like");
+        $repositoryPost = $doctrine->getRepository(Post::class);
 
+        $post = $repositoryPost->findOneBy(["Slug" => $slug]);
+        $post->setNumLikes($post->getNumLikes() + 1);
+
+        $entityManager = $doctrine->getManager();
+        $entityManager->persist($post);
+
+        try {
+            $entityManager->flush();
+            return $this->redirectToRoute("single_post", [
+                "slug" => $slug,
+            ]);
+        } catch (\Exception $e) {
+            return new Response("Error: " . $e->getMessage());
+        }
+        
     }
 
     #[Route("/blog", name: 'blog')]
@@ -91,16 +122,52 @@ class BlogController extends AbstractController
         $repositoryCat = $doctrine->getRepository(Category::class);
         $posts = $repositoryPost->findAll();
         $categories = $repositoryCat->findAll();
+        $recents = $repositoryPost->findRecents();
         
         return $this->render('blog/blog.html.twig', [
             'posts' => $posts,
-            'categories' => $categories
+            'categories' => $categories,
+            'recents' => $recents,
         ]);
     }
 
     #[Route("/single_post/{slug}", name: 'single_post')]
-    public function post(ManagerRegistry $doctrine, Request $request, $slug = 'cambiar'): Response
+    public function post(ManagerRegistry $doctrine, Request $request, $slug): Response
     {
-        return new Response("Single post");
+        $repositoryPost = $doctrine->getRepository(Post::class);
+        $post = $repositoryPost->findOneBy(["Slug" => $slug]);
+        $recents = $repositoryPost->findRecents();
+
+        $comment = new Comment();
+        
+        $form = $this->createForm(CommentFormType::class, $comment);
+
+        $form->handleRequest($request);
+
+        if($form->isSubmitted() && $form->isValid()) {
+            $comment = $form->getData();
+            $comment->setPost($post);
+
+            $post->setNumComments($post->getNumComments() + 1);
+
+            $entityManager = $doctrine->getManager();
+            $entityManager->persist($comment);
+            $entityManager->persist($post);
+
+            try {
+                $entityManager->flush();
+                return $this->redirectToRoute("single_post", [
+                    "slug" => $slug,
+                ]);
+            } catch (\Exception $e) {
+                return new Response("Error" . $e->getMessage());
+            }
+        }
+
+        return $this->render('blog/single_post.html.twig', [
+            'post' => $post,
+            'recents' => $recents,
+            'commentForm' => $form->createView(),
+        ]);
     }
 }
