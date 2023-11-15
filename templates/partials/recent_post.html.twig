@@ -4,8 +4,8 @@
         <h5> By <span>{{ recent.user.name }}</span></h5>
         <p>{{ post.publishedAt | date('d') }} {{ post.publishedAt | date('F') }}</p>
         <p><i class="fa fa-clock-o sr-icons"></i> 
-         {{ post.publishedAt | date('h') }} 
-         {{ post.publishedAt | date('A') }}
+         {{ recent.publishedAt | date('h') }} 
+         {{ recent.publishedAt | date('A') }}
          </p>
 </div>
     

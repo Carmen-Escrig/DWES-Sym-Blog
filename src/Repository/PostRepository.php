@@ -52,13 +52,31 @@ class PostRepository extends ServiceEntityRepository
     */
     public function findByTextPaginated(int $page, string $searchTerm)
     {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.Content LIKE :val')
+            ->setParameter('val', $searchTerm)
+            ->orderBy('p.id', 'ASC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult()
+        ;
+        
+        
+    }
+
+
+   /*  public function findByTextPaginated(int $page, string $searchTerm)
+    {
         $qb = $this->createQueryBuilder('p')
             ->andWhere("p.Content LIKE :val")
             ->setParameter('val', '%'.$searchTerm.'%')
             ->orderBy('p.PublishedAt', 'DESC');
         
         return (new Paginator($qb))->paginate($page);
-    }
+    } */
+
+
+
     // /**
     //  * @return Post[] Returns an array of Post objects
     //  */

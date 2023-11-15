@@ -48,7 +48,7 @@ class AdminController extends AbstractController
                             $this->getParameter('portfolio_directory') . '/'.  $newFilename, true);
                    
                 } catch (FileException $e) {
-                    // ... handle exception if something happens during file upload
+                    return new Response("Error" . $e->getMessage());
                 }
         
                 // updates the 'file$filename' property to store the PDF file name
@@ -58,7 +58,12 @@ class AdminController extends AbstractController
             $image = $form->getData();    
             $entityManager = $doctrine->getManager();    
             $entityManager->persist($image);
-            $entityManager->flush();
+            try {
+                $entityManager->flush();
+                return $this->redirectToRoute("app_images");
+            } catch (\Exception $e) {
+                return new Response("Error" . $e->getMessage());
+            }
         }
         return $this->render('admin/images.html.twig', array(
             'form' => $form->createView(),
