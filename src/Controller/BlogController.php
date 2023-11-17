@@ -29,7 +29,9 @@ class BlogController extends AbstractController
         $repositoryPost = $doctrine->getRepository(Post::class);
         $repositoryCat = $doctrine->getRepository(Category::class);
 
-        $posts = $repositoryPost->findByTextPaginated($page, $request->query->get('searchTerm'));
+        $search = $request->query->get('searchTerm') ?? '';
+
+        $posts = $repositoryPost->findByText($search);
 
         $categories = $repositoryCat->findAll();
         $recents = $repositoryPost->findRecents();
@@ -111,7 +113,7 @@ class BlogController extends AbstractController
         $repositoryPost = $doctrine->getRepository(Post::class);
 
         $post = $repositoryPost->findOneBy(["Slug" => $slug]);
-        $post->setNumLikes($post->getNumLikes() + 1);
+        $post->addLike();
 
         $entityManager = $doctrine->getManager();
         $entityManager->persist($post);
