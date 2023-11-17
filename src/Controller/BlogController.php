@@ -31,12 +31,13 @@ class BlogController extends AbstractController
 
         $search = $request->query->get('searchTerm') ?? '';
 
-        $posts = $repositoryPost->findByText($search);
+        $posts = $repositoryPost->findByTextPaginated($page, $search);
 
         $categories = $repositoryCat->findAll();
         $recents = $repositoryPost->findRecents();
         
         return $this->render('blog/blog.html.twig', [
+            'searchTerm' => $search,
             'posts' => $posts,
             'categories' => $categories,
             'recents' => $recents,
@@ -129,12 +130,12 @@ class BlogController extends AbstractController
         
     }
 
-    #[Route("/blog", name: 'blog')]
-    public function index(ManagerRegistry $doctrine): Response
+    #[Route("/blog/{page}", name: 'blog')]
+    public function index(ManagerRegistry $doctrine, int $page = 1): Response
     {
         $repositoryPost = $doctrine->getRepository(Post::class);
         $repositoryCat = $doctrine->getRepository(Category::class);
-        $posts = $repositoryPost->findAll();
+        $posts = $repositoryPost->findAllPaginated($page);
         $categories = $repositoryCat->findAll();
         $recents = $repositoryPost->findRecents();
         
